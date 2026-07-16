@@ -775,11 +775,24 @@ INT wifi_hal_setRadioOperatingParameters(wifi_radio_index_t index, wifi_radio_op
         return RETURN_OK;
     }
 
-    primary_interface = get_primary_interface(radio);
-    if (primary_interface == NULL) {
-        wifi_hal_error_print("%s:%d: Error updating dev:%d no vprimary interface exist\n", __func__, __LINE__, radio->index);
-        return RETURN_ERR;
+#if defined(ENABLED_EDPD)
+    /* After eco mode power_up (transition from EcoPowerDown=true -> false), the PCIe
+     * device re-enumerates and the kernel assigns new nl80211 interface indices.
+     * The HAL never receives NL80211_CMD_NEW_INTERFACE index updates (only
+     * NL80211_CMD_REG_CHANGE fires, which carries no ifindex). Refresh the
+     * interface map for this radio before attempting any nl80211 configuration. */
+    if (radio->oper_param.EcoPowerDown == true && operationParam->EcoPowerDown == false) {
+        struct nl_msg *refresh_msg;
+        wifi_hal_dbg_print("%s:%d: Eco power-up on radio %d - refreshing nl80211 interface indices\n",
+            __func__, __LINE__, index);
+        refresh_msg = nl80211_drv_cmd_msg(g_wifi_hal.nl80211_id, NULL, NLM_F_DUMP,
+            NL80211_CMD_GET_INTERFACE);
+        if (refresh_msg != NULL) {
+            nla_put_u32(refresh_msg, NL80211_ATTR_WIPHY, radio->index);
+            nl80211_send_and_recv(refresh_msg, interface_info_handler, radio, NULL, NULL);
+        }
     }
+#endif /* ENABLED_EDPD */
 
     old_operationParam = (wifi_radio_operationParam_t *)malloc(sizeof(wifi_radio_operationParam_t));
     if (old_operationParam == NULL) {
