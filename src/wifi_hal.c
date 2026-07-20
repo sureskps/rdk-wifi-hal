@@ -775,7 +775,6 @@ INT wifi_hal_setRadioOperatingParameters(wifi_radio_index_t index, wifi_radio_op
         return RETURN_OK;
     }
 
-#if defined(ENABLED_EDPD)
     /* After eco mode power_up (transition from EcoPowerDown=true -> false), the PCIe
      * device re-enumerates and the kernel assigns new nl80211 interface indices.
      * The HAL never receives NL80211_CMD_NEW_INTERFACE index updates (only
@@ -792,7 +791,6 @@ INT wifi_hal_setRadioOperatingParameters(wifi_radio_index_t index, wifi_radio_op
             nl80211_send_and_recv(refresh_msg, interface_info_handler, radio, NULL, NULL);
         }
     }
-#endif /* ENABLED_EDPD */
 
     old_operationParam = (wifi_radio_operationParam_t *)malloc(sizeof(wifi_radio_operationParam_t));
     if (old_operationParam == NULL) {
